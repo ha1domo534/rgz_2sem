@@ -1,4 +1,4 @@
-#include "rgz.h"
+#include "rgr.h"
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -48,7 +48,7 @@ int write_data(const char* path, const uint8_t* data, size_t len) {
             if (!f) return -1;
             fwrite(data, 1, len, f);
             fclose(f);
-            printf("Created file: %s\n", full_path);
+            printf("Создан файл: %s\n", full_path);
             return 0;
         } else {
             FILE* f = fopen(path, "wb");
@@ -197,126 +197,4 @@ int playfair_decrypt(const uint8_t* input, size_t input_len, const uint8_t* key,
     }
     memcpy(output, dec.c_str(), dec.size() + 1);
     return 0;
-}
-
-void print_help(const char* prog_name) {
-    printf("Usage: %s [OPTIONS]\n", prog_name);
-    printf("Options:\n");
-    printf("  -a, --algorithm ALGO   xor, playfair\n");
-    printf("  -m, --mode MODE        encrypt, decrypt, gen-key\n");
-    printf("  -k, --key KEY          key string or file\n");
-    printf("  -i, --input FILE       input file (default stdin)\n");
-    printf("  -o, --output FILE      output file (default stdout)\n");
-    printf("  --gen-key              generate random key\n");
-    printf("  -h, --help             show this help\n");
-}
-
-int parse_arguments(int argc, char* argv[], struct Arguments* args) {
-    args->algorithm = 0;
-    args->mode = -1;
-    args->key = NULL;
-    args->input = NULL;
-    args->output = NULL;
-    args->gen_key = 0;
-    args->help = 0;
-    for (int i = 1; i < argc; ++i) {
-        if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
-            args->help = 1;
-            return 0;
-        } else if (strcmp(argv[i], "--algorithm") == 0 || strcmp(argv[i], "-a") == 0) {
-            if (i+1 < argc) {
-                ++i;
-                if (strcmp(argv[i], "xor") == 0) args->algorithm = ALGORITHM_XOR;
-                else if (strcmp(argv[i], "playfair") == 0) args->algorithm = ALGORITHM_PLAYFAIR;
-                else return -1;
-            } else return -1;
-        } else if (strcmp(argv[i], "--mode") == 0 || strcmp(argv[i], "-m") == 0) {
-            if (i+1 < argc) {
-                ++i;
-                if (strcmp(argv[i], "encrypt") == 0) args->mode = 0;
-                else if (strcmp(argv[i], "decrypt") == 0) args->mode = 1;
-                else if (strcmp(argv[i], "gen-key") == 0) args->mode = 2;
-                else return -1;
-            } else return -1;
-        } else if (strcmp(argv[i], "--key") == 0 || strcmp(argv[i], "-k") == 0) {
-            if (i+1 < argc) { ++i; args->key = argv[i]; }
-            else return -1;
-        } else if (strcmp(argv[i], "--input") == 0 || strcmp(argv[i], "-i") == 0) {
-            if (i+1 < argc) { ++i; args->input = argv[i]; }
-            else return -1;
-        } else if (strcmp(argv[i], "--output") == 0 || strcmp(argv[i], "-o") == 0) {
-            if (i+1 < argc) { ++i; args->output = argv[i]; }
-            else return -1;
-        } else if (strcmp(argv[i], "--gen-key") == 0) {
-            args->gen_key = 1;
-            args->mode = 2;
-        } else {
-            return -1;
-        }
-    }
-    if (args->help) return 0;
-    if (args->mode == -1) return -1;
-    if (args->mode != 2 && !args->key) return -1;
-    if (args->algorithm == 0 && args->mode != 2) return -1;
-    return 0;
-}
-
-int process_data(const struct Arguments* args) {
-    if (args->mode == 2) {
-        size_t key_len;
-        char* key = generate_key(args->algorithm, &key_len);
-        if (!key) return 1;
-        if (args->output) {
-            write_data(args->output, (uint8_t*)key, key_len);
-        } else {
-            fwrite(key, 1, key_len, stdout);
-        }
-        free(key);
-        return 0;
-    }
-    uint8_t* input_data = NULL;
-    size_t input_len = 0;
-    if (read_data(args->input, &input_data, &input_len) != 0) return 1;
-    uint8_t* key_data = NULL;
-    size_t key_len = 0;
-    FILE* test = fopen(args->key, "rb");
-    if (test) {
-        fclose(test);
-        if (read_data(args->key, &key_data, &key_len) != 0) {
-            free(input_data);
-            return 1;
-        }
-    } else {
-        key_len = strlen(args->key);
-        key_data = (uint8_t*)malloc(key_len);
-        memcpy(key_data, args->key, key_len);
-    }
-    uint8_t* output_data = NULL;
-    size_t output_len = 0;
-    int ret = 0;
-    if (args->algorithm == ALGORITHM_XOR) {
-        output_len = input_len;
-        output_data = (uint8_t*)malloc(output_len);
-        if (!output_data) { ret = 1; goto cleanup; }
-        xor_cipher(input_data, input_len, key_data, key_len, output_data);
-    } else if (args->algorithm == ALGORITHM_PLAYFAIR) {
-        output_len = input_len;
-        output_data = (uint8_t*)malloc(output_len);
-        if (!output_data) { ret = 1; goto cleanup; }
-        if (args->mode == 0) {
-            ret = playfair_encrypt(input_data, input_len, key_data, key_len, output_data);
-        } else {
-            ret = playfair_decrypt(input_data, input_len, key_data, key_len, output_data);
-        }
-    } else {
-        ret = 1;
-    }
-    if (ret == 0) {
-        if (write_data(args->output, output_data, output_len) != 0) ret = 1;
-    }
-cleanup:
-    free(input_data);
-    free(key_data);
-    if (output_data) free(output_data);
-    return ret;
 }
