@@ -6,6 +6,7 @@
 #include <ctime>
 #include <vector>
 #include <string>
+#include <cmath>
 
 int read_data(const char* path, uint8_t** data, size_t* len) {
     if (!path) {
@@ -79,6 +80,36 @@ char* generate_key(int algorithm, size_t* key_len) {
         key[len-1] = '\0';
         *key_len = len-1;
         return key;
+    } else if (algorithm == ALGORITHM_CAESAR) {
+        size_t len = 1;
+        char* key = (char*)malloc(len);
+        key[0] = (char)(rand() % 26);
+        *key_len = len;
+        return key;
+    } else if (algorithm == ALGORITHM_VIGENERE) {
+        size_t len = 8;
+        char* key = (char*)malloc(len + 1);
+        for (size_t i = 0; i < len; ++i) {
+            key[i] = 'A' + (rand() % 26);
+        }
+        key[len] = '\0';
+        *key_len = len;
+        return key;
+    } else if (algorithm == ALGORITHM_SCYTALE) {
+        size_t len = 1;
+        char* key = (char*)malloc(len);
+        key[0] = 2 + (rand() % 10);
+        *key_len = len;
+        return key;
+    } else if (algorithm == ALGORITHM_GRONSFELD) {
+        size_t len = 6;
+        char* key = (char*)malloc(len + 1);
+        for (size_t i = 0; i < len; ++i) {
+            key[i] = '0' + (rand() % 10);
+        }
+        key[len] = '\0';
+        *key_len = len;
+        return key;
     }
     return NULL;
 }
@@ -90,6 +121,7 @@ int xor_cipher(const uint8_t* input, size_t input_len, const uint8_t* key, size_
     return 0;
 }
 
+// ==================== Плейфер ====================
 static void build_playfair_table(const char* keyword, char table[5][5]) {
     char used[26] = {0};
     int idx = 0;
@@ -196,5 +228,123 @@ int playfair_decrypt(const uint8_t* input, size_t input_len, const uint8_t* key,
         return -1;
     }
     memcpy(output, dec.c_str(), dec.size() + 1);
+    return 0;
+}
+
+// ==================== Чечулин О.: Цезарь ====================
+int caesar_cipher(const uint8_t* input, size_t input_len, const uint8_t* key, size_t key_len, uint8_t* output, int mode) {
+    int shift = key[0] % 26;
+    if (mode == 1) {
+        for (size_t i = 0; i < input_len; ++i) {
+            unsigned char c = input[i];
+            if (c >= 'a' && c <= 'z') {
+                output[i] = 'a' + (c - 'a' + shift) % 26;
+            } else if (c >= 'A' && c <= 'Z') {
+                output[i] = 'A' + (c - 'A' + shift) % 26;
+            } else {
+                output[i] = c;
+            }
+        }
+    } else {
+        for (size_t i = 0; i < input_len; ++i) {
+            unsigned char c = input[i];
+            if (c >= 'a' && c <= 'z') {
+                output[i] = 'a' + (c - 'a' - shift + 26) % 26;
+            } else if (c >= 'A' && c <= 'Z') {
+                output[i] = 'A' + (c - 'A' - shift + 26) % 26;
+            } else {
+                output[i] = c;
+            }
+        }
+    }
+    return 0;
+}
+
+// ==================== Чечулин О.: Виженер ====================
+int vigenere_cipher(const uint8_t* input, size_t input_len, const uint8_t* key, size_t key_len, uint8_t* output, int mode) {
+    for (size_t i = 0; i < input_len; ++i) {
+        unsigned char c = input[i];
+        int k = key[i % key_len];
+        if (k >= 'a' && k <= 'z') k = k - 'a';
+        else if (k >= 'A' && k <= 'Z') k = k - 'A';
+        else k = 0;
+        
+        if (mode == 1) {
+            if (c >= 'a' && c <= 'z') {
+                output[i] = 'a' + (c - 'a' + k) % 26;
+            } else if (c >= 'A' && c <= 'Z') {
+                output[i] = 'A' + (c - 'A' + k) % 26;
+            } else {
+                output[i] = c;
+            }
+        } else {
+            if (c >= 'a' && c <= 'z') {
+                output[i] = 'a' + (c - 'a' - k + 26) % 26;
+            } else if (c >= 'A' && c <= 'Z') {
+                output[i] = 'A' + (c - 'A' - k + 26) % 26;
+            } else {
+                output[i] = c;
+            }
+        }
+    }
+    return 0;
+}
+
+// ==================== Боровков А.: Скитала ====================
+int scytale_cipher(const uint8_t* input, size_t input_len, const uint8_t* key, size_t key_len, uint8_t* output, int mode) {
+    int cols = key[0];
+    if (cols < 2) cols = 2;
+    int rows = (input_len + cols - 1) / cols;
+    
+    if (mode == 1) {
+        int idx = 0;
+        for (int c = 0; c < cols; ++c) {
+            for (int r = 0; r < rows; ++r) {
+                int pos = r * cols + c;
+                if (pos < (int)input_len) {
+                    output[idx++] = input[pos];
+                } else {
+                    output[idx++] = ' ';
+                }
+            }
+        }
+    } else {
+        int idx = 0;
+        for (int r = 0; r < rows; ++r) {
+            for (int c = 0; c < cols; ++c) {
+                int pos = c * rows + r;
+                if (pos < (int)input_len) {
+                    output[idx++] = input[pos];
+                }
+            }
+        }
+    }
+    return 0;
+}
+
+// ==================== Боровков А.: Гронфельд ====================
+int gronsfeld_cipher(const uint8_t* input, size_t input_len, const uint8_t* key, size_t key_len, uint8_t* output, int mode) {
+    for (size_t i = 0; i < input_len; ++i) {
+        unsigned char c = input[i];
+        int shift = (key[i % key_len] - '0') % 10;
+        
+        if (mode == 1) {
+            if (c >= 'a' && c <= 'z') {
+                output[i] = 'a' + (c - 'a' + shift) % 26;
+            } else if (c >= 'A' && c <= 'Z') {
+                output[i] = 'A' + (c - 'A' + shift) % 26;
+            } else {
+                output[i] = c;
+            }
+        } else {
+            if (c >= 'a' && c <= 'z') {
+                output[i] = 'a' + (c - 'a' - shift + 26) % 26;
+            } else if (c >= 'A' && c <= 'Z') {
+                output[i] = 'A' + (c - 'A' - shift + 26) % 26;
+            } else {
+                output[i] = c;
+            }
+        }
+    }
     return 0;
 }

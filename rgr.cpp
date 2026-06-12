@@ -15,16 +15,24 @@ void show_menu() {
     printf("Ваш выбор: ");
 }
 
+void show_algorithms() {
+    printf("\nВыберите алгоритм:\n");
+    printf("1. XOR\n");
+    printf("2. Playfair\n");
+    printf("3. Цезарь (Чечулин О.)\n");
+    printf("4. Виженер (Чечулин О.)\n");
+    printf("5. Скитала (Боровков А.)\n");
+    printf("6. Гронфельд (Боровков А.)\n");
+    printf("Ваш выбор: ");
+}
+
 void process_text() {
     int alg, mode;
     char key[256];
     char text[4096];
     char result[4096];
     
-    printf("\nВыберите алгоритм:\n");
-    printf("1. XOR\n");
-    printf("2. Playfair\n");
-    printf("Ваш выбор: ");
+    show_algorithms();
     scanf("%d", &alg);
     getchar();
     
@@ -54,19 +62,35 @@ void process_text() {
     
     int ret = -1;
     
-    if (alg == 1) {
-        xor_cipher((uint8_t*)text, input_len, (uint8_t*)key, key_len, output_data);
-        ret = 0;
-    } else if (alg == 2) {
-        if (mode == 1) {
-            ret = playfair_encrypt((uint8_t*)text, input_len, (uint8_t*)key, key_len, output_data);
-        } else {
-            ret = playfair_decrypt((uint8_t*)text, input_len, (uint8_t*)key, key_len, output_data);
-        }
-    } else {
-        printf("Неверный выбор алгоритма\n");
-        free(output_data);
-        return;
+    switch(alg) {
+        case 1:
+            xor_cipher((uint8_t*)text, input_len, (uint8_t*)key, key_len, output_data);
+            ret = 0;
+            break;
+        case 2:
+            if (mode == 1) ret = playfair_encrypt((uint8_t*)text, input_len, (uint8_t*)key, key_len, output_data);
+            else ret = playfair_decrypt((uint8_t*)text, input_len, (uint8_t*)key, key_len, output_data);
+            break;
+        case 3:
+            ret = caesar_cipher((uint8_t*)text, input_len, (uint8_t*)key, key_len, output_data, mode);
+            break;
+        case 4:
+            ret = vigenere_cipher((uint8_t*)text, input_len, (uint8_t*)key, key_len, output_data, mode);
+            break;
+        case 5:
+            {
+                uint8_t scytale_key[1];
+                scytale_key[0] = atoi(key);
+                ret = scytale_cipher((uint8_t*)text, input_len, scytale_key, 1, output_data, mode);
+            }
+            break;
+        case 6:
+            ret = gronsfeld_cipher((uint8_t*)text, input_len, (uint8_t*)key, key_len, output_data, mode);
+            break;
+        default:
+            printf("Неверный выбор алгоритма\n");
+            free(output_data);
+            return;
     }
     
     if (ret == 0) {
@@ -92,10 +116,7 @@ void process_file() {
     char input_path[1024];
     char output_path[1024];
     
-    printf("\nВыберите алгоритм:\n");
-    printf("1. XOR\n");
-    printf("2. Playfair\n");
-    printf("Ваш выбор: ");
+    show_algorithms();
     scanf("%d", &alg);
     getchar();
     
@@ -128,6 +149,13 @@ void process_file() {
     
     size_t key_len = strlen(key);
     uint8_t* key_data = (uint8_t*)key;
+    uint8_t scytale_key[1];
+    
+    if (alg == 5) {
+        scytale_key[0] = atoi(key);
+        key_data = scytale_key;
+        key_len = 1;
+    }
     
     uint8_t* output_data = (uint8_t*)malloc(input_len + 1);
     if (!output_data) {
@@ -138,20 +166,32 @@ void process_file() {
     
     int ret = -1;
     
-    if (alg == 1) {
-        xor_cipher(input_data, input_len, key_data, key_len, output_data);
-        ret = 0;
-    } else if (alg == 2) {
-        if (mode == 1) {
-            ret = playfair_encrypt(input_data, input_len, key_data, key_len, output_data);
-        } else {
-            ret = playfair_decrypt(input_data, input_len, key_data, key_len, output_data);
-        }
-    } else {
-        printf("Неверный выбор алгоритма\n");
-        free(input_data);
-        free(output_data);
-        return;
+    switch(alg) {
+        case 1:
+            xor_cipher(input_data, input_len, key_data, key_len, output_data);
+            ret = 0;
+            break;
+        case 2:
+            if (mode == 1) ret = playfair_encrypt(input_data, input_len, key_data, key_len, output_data);
+            else ret = playfair_decrypt(input_data, input_len, key_data, key_len, output_data);
+            break;
+        case 3:
+            ret = caesar_cipher(input_data, input_len, key_data, key_len, output_data, mode);
+            break;
+        case 4:
+            ret = vigenere_cipher(input_data, input_len, key_data, key_len, output_data, mode);
+            break;
+        case 5:
+            ret = scytale_cipher(input_data, input_len, key_data, key_len, output_data, mode);
+            break;
+        case 6:
+            ret = gronsfeld_cipher(input_data, input_len, key_data, key_len, output_data, mode);
+            break;
+        default:
+            printf("Неверный выбор алгоритма\n");
+            free(input_data);
+            free(output_data);
+            return;
     }
     
     if (ret == 0) {
@@ -171,10 +211,7 @@ void process_file() {
 void process_gen_key() {
     int alg;
     
-    printf("\nВыберите алгоритм:\n");
-    printf("1. XOR\n");
-    printf("2. Playfair\n");
-    printf("Ваш выбор: ");
+    show_algorithms();
     scanf("%d", &alg);
     getchar();
     
@@ -187,10 +224,13 @@ void process_gen_key() {
     }
     
     printf("\nСгенерированный ключ: ");
-    if (alg == ALGORITHM_XOR) {
+    if (alg == 1) {
         for (size_t i = 0; i < key_len; ++i) {
             printf("%02x ", (unsigned char)key[i]);
         }
+        printf("\n");
+    } else if (alg == 5) {
+        printf("%d", key[0]);
         printf("\n");
     } else {
         printf("%s\n", key);
