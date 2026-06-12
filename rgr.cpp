@@ -19,10 +19,10 @@ void show_algorithms() {
     printf("\nВыберите алгоритм:\n");
     printf("1. XOR\n");
     printf("2. Playfair\n");
-    printf("3. Цезарь (Чечулин О.)\n");
-    printf("4. Виженер (Чечулин О.)\n");
-    printf("5. Скитала (Боровков А.)\n");
-    printf("6. Гронфельд (Боровков А.)\n");
+    printf("3. Цезарь\n");
+    printf("4. Виженер\n");
+    printf("5. Скитала\n");
+    printf("6. Гронфельд\n");
     printf("Ваш выбор: ");
 }
 
