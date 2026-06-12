@@ -23,7 +23,7 @@ int playfair_decrypt(const uint8_t* input, size_t input_len, const uint8_t* key,
 int caesar_cipher(const uint8_t* input, size_t input_len, const uint8_t* key, size_t key_len, uint8_t* output, int mode);
 int vigenere_cipher(const uint8_t* input, size_t input_len, const uint8_t* key, size_t key_len, uint8_t* output, int mode);
 
-// Боровков А.
+// Боровкова К.
 int scytale_cipher(const uint8_t* input, size_t input_len, const uint8_t* key, size_t key_len, uint8_t* output, int mode);
 int gronsfeld_cipher(const uint8_t* input, size_t input_len, const uint8_t* key, size_t key_len, uint8_t* output, int mode);
 
