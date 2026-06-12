@@ -290,7 +290,7 @@ int vigenere_cipher(const uint8_t* input, size_t input_len, const uint8_t* key, 
     return 0;
 }
 
-// ==================== Боровков А.: Скитала ====================
+// ==================== Боровкова К.: Скитала ====================
 int scytale_cipher(const uint8_t* input, size_t input_len, const uint8_t* key, size_t key_len, uint8_t* output, int mode) {
     int cols = key[0];
     if (cols < 2) cols = 2;
@@ -322,7 +322,7 @@ int scytale_cipher(const uint8_t* input, size_t input_len, const uint8_t* key, s
     return 0;
 }
 
-// ==================== Боровков А.: Гронфельд ====================
+// ==================== Боровкова К.: Гронфельд ====================
 int gronsfeld_cipher(const uint8_t* input, size_t input_len, const uint8_t* key, size_t key_len, uint8_t* output, int mode) {
     for (size_t i = 0; i < input_len; ++i) {
         unsigned char c = input[i];
