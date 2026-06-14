@@ -7,8 +7,6 @@
 #include <vector>
 #include <string>
 
-// ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
-
 int read_data(const char* path, uint8_t** data, size_t* len) {
     if (!path) {
         std::vector<uint8_t> buffer;
@@ -145,7 +143,7 @@ char* generate_key(int algorithm, size_t* key_len) {
     return NULL;
 }
 
-// ========== XOR ==========
+// xor
 
 int xor_cipher(const uint8_t* input, size_t input_len, const uint8_t* key, 
                size_t key_len, uint8_t* output) {
@@ -155,7 +153,7 @@ int xor_cipher(const uint8_t* input, size_t input_len, const uint8_t* key,
     return 0;
 }
 
-// ========== PLAYFAIR ==========
+// playfair
 
 static void build_playfair_table(const char* keyword, char table[5][5]) {
     char used[26] = {0};
@@ -307,7 +305,7 @@ int playfair_decrypt(const uint8_t* input, size_t input_len, const uint8_t* key,
     return 0;
 }
 
-// ========== CAESAR ==========
+// caesar
 
 int caesar_cipher(const uint8_t* input, size_t input_len, const uint8_t* key, 
                   size_t key_len, uint8_t* output, int mode) {
@@ -330,7 +328,7 @@ int caesar_cipher(const uint8_t* input, size_t input_len, const uint8_t* key,
     return 0;
 }
 
-// ========== VIGENERE ==========
+// vigenere
 
 int vigenere_cipher(const uint8_t* input, size_t input_len, const uint8_t* key, 
                     size_t key_len, uint8_t* output, int mode) {
@@ -346,23 +344,23 @@ int vigenere_cipher(const uint8_t* input, size_t input_len, const uint8_t* key,
             k = 0;
         }
         
+        int shift = k;
         if (mode == 2) {
-            k = (26 - k) % 26;
+            shift = -k;
         }
         
         if (c >= 'a' && c <= 'z') {
-            output[i] = 'a' + (c - 'a' + k) % 26;
+            output[i] = 'a' + (c - 'a' + shift + 26) % 26;
         } else if (c >= 'A' && c <= 'Z') {
-            output[i] = 'A' + (c - 'A' + k) % 26;
+            output[i] = 'A' + (c - 'A' + shift + 26) % 26;
         } else {
             output[i] = c;
         }
     }
-    
     return 0;
 }
 
-// ========== SCYTALE ==========
+// scytale
 
 int scytale_cipher(const uint8_t* input, size_t input_len, const uint8_t* key, 
                    size_t key_len, uint8_t** output, size_t* output_len, int mode) {
@@ -370,32 +368,34 @@ int scytale_cipher(const uint8_t* input, size_t input_len, const uint8_t* key,
     if (cols < 2) cols = 2;
     
     int rows = (input_len + cols - 1) / cols;
+    *output_len = input_len;
+    *output = (uint8_t*)malloc(*output_len);
+    if (!*output) return -1;
     
     if (mode == 1) {
-        *output_len = rows * cols;
-        *output = (uint8_t*)malloc(*output_len);
-        if (!*output) return -1;
-        
         size_t idx = 0;
-        for (int c = 0; c < cols; ++c) {
-            for (int r = 0; r < rows; ++r) {
+        for (int c = 0; c < cols; c++) {
+            for (int r = 0; r < rows; r++) {
                 int pos = r * cols + c;
                 if (pos < (int)input_len) {
                     (*output)[idx++] = input[pos];
-                } else {
-                    (*output)[idx++] = 0;
                 }
             }
         }
     } else {
-        *output_len = input_len;
-        *output = (uint8_t*)malloc(*output_len);
-        if (!*output) return -1;
+        int full_cols = input_len % cols;
+        int rows_minus = rows - 1;
         
         size_t idx = 0;
-        for (int r = 0; r < rows; ++r) {
-            for (int c = 0; c < cols; ++c) {
-                int pos = c * rows + r;
+        for (int r = 0; r < rows; r++) {
+            for (int c = 0; c < cols; c++) {
+                int pos;
+                if (c < full_cols) {
+                    pos = c * rows + r;
+                } else {
+                    pos = full_cols * rows + (c - full_cols) * rows_minus + r;
+                    if (r >= rows_minus) continue;
+                }
                 if (pos < (int)input_len) {
                     (*output)[idx++] = input[pos];
                 }
@@ -410,26 +410,44 @@ int scytale_cipher(const uint8_t* input, size_t input_len, const uint8_t* key,
     return 0;
 }
 
-// ========== GRONSFELD ==========
+// gronsfeld
 
 int gronsfeld_cipher(const uint8_t* input, size_t input_len, const uint8_t* key, 
                      size_t key_len, uint8_t* output, int mode) {
     for (size_t i = 0; i < input_len; ++i) {
         unsigned char c = input[i];
-        int shift = (key[i % key_len] - '0') % 10;
+        unsigned char key_char = key[i % key_len];
+        int shift;
         
-        if (mode == 2) {
-            shift = (10 - shift) % 10;
+        if (key_char >= '0' && key_char <= '9') {
+            shift = key_char - '0';
+        } else if (key_char >= 'a' && key_char <= 'j') {
+            shift = key_char - 'a';
+        } else if (key_char >= 'A' && key_char <= 'J') {
+            shift = key_char - 'A';
+        } else {
+            shift = 0;
         }
         
         if (c >= 'a' && c <= 'z') {
-            output[i] = 'a' + (c - 'a' + shift) % 26;
+            int pos = c - 'a';
+            if (mode == 1) {
+                pos = (pos + shift) % 26;
+            } else {
+                pos = (pos - shift + 26) % 26;
+            }
+            output[i] = 'a' + pos;
         } else if (c >= 'A' && c <= 'Z') {
-            output[i] = 'A' + (c - 'A' + shift) % 26;
+            int pos = c - 'A';
+            if (mode == 1) {
+                pos = (pos + shift) % 26;
+            } else {
+                pos = (pos - shift + 26) % 26;
+            }
+            output[i] = 'A' + pos;
         } else {
             output[i] = c;
         }
     }
-    
     return 0;
 }
